@@ -3,12 +3,10 @@
 //=============================================================================================
 #include "framework.h"
 
-enum MaterialType { ROUGH, REFLECTIVE };
-
 
 const float epsilon = 0.00001f;
-const vec3 n = vec3(0.17f, 0.35f, 1.5f);
-const vec3 k = vec3(3.1f, 2.7f, 1.9f);
+const vec3 n = vec3(0.17, 0.35, 1.5);
+const vec3 k = vec3(3.1, 2.7, 1.9);
 
 float F(float n, float k) { return ((n - 1) * (n - 1) + k * k) / ((n + 1) * (n + 1) + k * k); }
 
@@ -16,8 +14,7 @@ struct Material {
 	vec3 ka, kd, ks;
 	float  shininess;
 	vec3 F0;
-	MaterialType type;
-	Material(MaterialType t) { type = t; }
+	int rough, reflective;
 };
 
 
@@ -27,17 +24,21 @@ vec3 operator/(vec3 num, vec3 denom) {
 
 
 struct RoughMaterial : Material {
-	RoughMaterial(vec3 _kd, vec3 _ks, float _shininess) : Material(ROUGH) {
+	RoughMaterial(vec3 _kd, vec3 _ks, float _shininess) {
 		ka = _kd * M_PI;
 		kd = _kd;
 		ks = _ks;
 		shininess = _shininess;
+		rough = true;
+		reflective = false;
 	}
 };
 
 struct ReflectiveMaterial : Material {
-	ReflectiveMaterial(vec3 n, vec3 kappa) : Material(REFLECTIVE) {
-		F0 = ((n - 1.0) * (n - 1.0) + kappa * kappa) / ((n + 1.0) * (n + 1.0) + kappa * kappa);
+	ReflectiveMaterial(vec3 _F0) {
+		F0 = _F0;
+		rough = false;
+		reflective = true;
 	}
 };
 
@@ -62,7 +63,7 @@ public:
 
 
 float length(vec3 p, vec3 c) {
-	return sqrtf(powf(p.x - c.x,2) + powf(p.y - c.y,2) + powf(p.z - c.z,2));
+	return sqrtf(powf(p.x - c.x, 2) + powf(p.y - c.y, 2) + powf(p.z - c.z, 2));
 }
 
 bool isEqual(float f1, float f2) {
@@ -73,7 +74,7 @@ bool isEqual(float f1, float f2) {
 }
 
 struct Sphere : public Intersectable {
-	vec3 center = (0.0,0.0,0.0);
+	vec3 center = vec3(0.0f,0.0f,0.0f);
 	float radius = 0.3f;
 	float a = 6.0f;
 	float b = 6.0f;
@@ -86,8 +87,8 @@ struct Sphere : public Intersectable {
 	}
 
 	Hit intersect(const Ray& ray) {
-		
 		/*
+		Hit hit;
 		vec3 dist = ray.start - center;
 		float a = dot(ray.dir, ray.dir);
 		float b = dot(dist, ray.dir) * 2.0f;
@@ -101,20 +102,21 @@ struct Sphere : public Intersectable {
 		hit.t = (t2 > 0) ? t2 : t1;
 		hit.position = ray.start + ray.dir * hit.t;
 		hit.normal = (hit.position - center) * (1.0f / radius);
+		hit.material = material;
 		*/
-
-	   
+		
+		
 		Hit hit;
 
 		float A = a * ray.dir.x * ray.dir.x + b * ray.dir.y * ray.dir.y;
 		float B = 2.0f * a * ray.start.x * ray.dir.x + 2.0f * b * ray.start.y * ray.dir.y - c * ray.dir.z;
 		float C = a * ray.start.x * ray.start.x + b * ray.start.y * ray.start.y - c * ray.start.z;
 
-		float discr = B * B - 4.0f * A * C;
+		float discr = B * B - 4.0 * A * C;
 		if (discr < 0) return hit;
 		float sqrt_discr = sqrtf(discr);
-		float t1 = (-B + sqrt_discr) / 2.0f / A;
-		float t2 = (-B - sqrt_discr) / 2.0f / A;
+		float t1 = (-B + sqrt_discr) / 2.0 / A;
+		float t2 = (-B - sqrt_discr) / 2.0 / A;
 		if (t1 <= 0) return hit;
 
 		vec3 p1 = ray.start + ray.dir * t1;
@@ -122,15 +124,15 @@ struct Sphere : public Intersectable {
 
 		//pont annyi
 
-		if (length(p1,center) > radius && length(p2, center) > radius) {
+		if (length(p1, center) > radius && length(p2, center) > radius) {
 			return hit;
 		}
-		if (length(p1, center) > radius && length(p2,center) < radius) {
+		if (length(p1, center) > radius && length(p2, center) < radius) {
 			if (t2 > 0) {
 				hit.t = t2;
 			}
 		}
-		if (length(p1, center) < radius && length(p2, center) > radius ) {
+		if (length(p1, center) < radius && length(p2, center) > radius) {
 			hit.t = t1;
 		}
 		if (length(p1, center) < radius && length(p2, center) < radius) {
@@ -148,16 +150,18 @@ struct Sphere : public Intersectable {
 
 		//vec3 n = cross(fx, fy);
 
-	
+
 
 		hit.position = ray.start + ray.dir * hit.t;
 		hit.normal = vec3(-((2.0 * a * X) / c), -((2.0 * b * Y) / c), 1.0);
+		
 
-		if (isEqual(dot(hit.normal, ray.start), 0.0f)) {
+		if (isEqual(dot(hit.normal, ray.start), 0.0)) {
 			hit.normal = -hit.normal;
 		}
-
+		
 		hit.material = material;
+				
 		return hit;
 	}
 };
@@ -275,38 +279,39 @@ public:
 		float fov = 45 * M_PI / 180;
 		camera.set(eye, lookat, vup, fov);
 
-		La = vec3(0.4f, 0.4f, 0.4f);
+		La = vec3(1.0f, 1.0f, 1.0f);
 		vec3 lightDirection(1, 1, 1), Le(2, 2, 2);
 		lights.push_back(new Light(lightDirection, Le));
 
-
+		//Rough
 		vec3 kd(0.3f, 0.2f, 0.1f), ks(2, 2, 2);
-
 		Material* mat2 = new RoughMaterial(kd, ks, 50);
-		Material* mat = new ReflectiveMaterial(n, k);
 
-		objects.push_back(new Dodeka(mat2));
+
+		vec3 F0;
+		F0.x = ((n.x - 1.0) * (n.x - 1.0) + k.x * k.x) / ((n.x + 1.0) * (n.x + 1.0) + k.x * k.x);
+		F0.y = ((n.y - 1.0) * (n.y - 1.0) + k.y * k.y) / ((n.y + 1.0) * (n.y + 1.0) + k.y * k.y);
+		F0.z = ((n.z - 1.0) * (n.z - 1.0) + k.z * k.z) / ((n.z + 1.0) * (n.z + 1.0) + k.z * k.z);
+		//printf("%3.20f %3.20f %3.20f", F0.x, F0.y, F0.z);
+		Material* mat = new ReflectiveMaterial(F0);
+
+
 
 
 		// ARANY MATERIAL
-		// ALAKZAT KINÉZETE
+		// ALAKZAT KINÉZETE X 
 		// DODEKAÉDER
 		// DODEKAÉDER SAKRAI
 		// PORTÁLOK
-		//for (int i = 0; i < 10; i++) {
+		//for (int i = 0; i < 50; i++) {
 			//objects.push_back(new Sphere(vec3(rnd() - 0.5f, rnd() - 0.5f, rnd() - 0.5f), rnd() * 0.1f, mat));
 			//objects.push_back(new Sphere(vec3(0.5f,  0.5f, 0.5f), 0.3f, mat));
-			objects.push_back(new Sphere(vec3(0.0f, 0.0f, 0.0f), 0.3f, mat));
+			//objects.push_back(new Sphere(vec3(rnd() - 0.5f, rnd() - 0.5f, rnd() - 0.5f), rnd() * 0.1f, mat));
+			//objects.push_back(new Sphere(vec3(rnd() - 0.5f, rnd() - 0.5f, rnd() - 0.5f), rnd() * 0.1f, mat2));
+		objects.push_back(new Sphere(vec3(0.0f, 0.0f, 0.0f), 0.3f, mat));
 		//}
 
-		
-
-		
-
-
-
-
-
+		//objects.push_back(new Dodeka(mat2));
 	}
 
 	void render(std::vector<vec4>& image) {
@@ -343,7 +348,7 @@ public:
 			return La;
 
 		vec3 outRadiance = (0, 0, 0);
-		if (hit.material->type == ROUGH) {
+		if (hit.material->rough == true) {
 			outRadiance = hit.material->ka * La;
 			for (Light* light : lights) {
 				Ray shadowRay(hit.position + hit.normal * epsilon, light->direction);
@@ -357,11 +362,15 @@ public:
 			}
 		}
 
-		if (hit.material->type == REFLECTIVE) {
+		if (hit.material->reflective == true) {
 			vec3 reflectedDir = ray.dir - hit.normal * dot(hit.normal, ray.dir) * 2.0f;
 			float cosa = -dot(ray.dir, hit.normal);
-			vec3 one = (1.0, 1.0, 1.0);
-			vec3 F = hit.material->F0 + (one - hit.material->F0) * pow(1 - cosa, 5);
+			vec3 F;
+			//F = hit.material->F0 + (one - hit.material->F0) * pow(1 - cosa, 5);
+			F.x = hit.material->F0.x + (1.0 - hit.material->F0.x) * pow(1.0 - cosa, 5);
+			F.y = hit.material->F0.y + (1.0 - hit.material->F0.y) * pow(1.0 - cosa, 5);
+			F.z = hit.material->F0.z + (1.0 - hit.material->F0.z) * pow(1.0 - cosa, 5);
+			//printf("%3.2f %3.2f %3.2f \n ", F.x, F.y, F.z);
 			outRadiance = outRadiance + trace(Ray(hit.position + hit.normal * epsilon, reflectedDir), depth + 1) * F;
 		}
 
