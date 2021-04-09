@@ -73,39 +73,20 @@ bool isEqual(float f1, float f2) {
 	return false;
 }
 
-struct Sphere : public Intersectable {
+struct Implicit : public Intersectable {
 	vec3 center = vec3(0.0f,0.0f,0.0f);
 	float radius = 0.3f;
-	float a = 6.0f;
-	float b = 6.0f;
-	float c = 1.0f;
+	float a = 8.0f;
+	float b = 8.0f;
+	float c = 3.0f;
 	//Kivenni a dolgokat
-	Sphere(const vec3& _center, float _radius, Material* _material) {
+	Implicit(const vec3& _center, float _radius, Material* _material) {
 		center = _center;
 		radius = _radius;
 		material = _material;
 	}
 
 	Hit intersect(const Ray& ray) {
-		/*
-		Hit hit;
-		vec3 dist = ray.start - center;
-		float a = dot(ray.dir, ray.dir);
-		float b = dot(dist, ray.dir) * 2.0f;
-		float c = dot(dist, dist) - radius * radius;
-		float discr = b * b - 4.0f * a * c;
-		if (discr < 0) return hit;
-		float sqrt_discr = sqrtf(discr);
-		float t1 = (-b + sqrt_discr) / 2.0f / a;	// t1 >= t2 for sure
-		float t2 = (-b - sqrt_discr) / 2.0f / a;
-		if (t1 <= 0) return hit;
-		hit.t = (t2 > 0) ? t2 : t1;
-		hit.position = ray.start + ray.dir * hit.t;
-		hit.normal = (hit.position - center) * (1.0f / radius);
-		hit.material = material;
-		*/
-		
-		
 		Hit hit;
 
 		float A = a * ray.dir.x * ray.dir.x + b * ray.dir.y * ray.dir.y;
@@ -119,10 +100,22 @@ struct Sphere : public Intersectable {
 		float t2 = (-B - sqrt_discr) / 2.0 / A;
 		if (t1 <= 0) return hit;
 
-		vec3 p1 = ray.start + ray.dir * t1;
-		vec3 p2 = ray.start + ray.dir * t2;
+		vec3 p1;
+		p1 = ray.start + ray.dir * t1;
+		//p1.y = ray.start.y + ray.dir.y * t1;
+		//p1.z = ray.start.z + ray.dir.z * t1;
 
-		//pont annyi
+
+
+		vec3 p2;
+		p2 = ray.start + ray.dir * t2;
+		//p2.y = ray.start.y + ray.dir.y * t2;
+		//p2.z = ray.start.z + ray.dir.z * t2;
+
+
+
+
+		//pont annyi lehet nemkell
 
 		if (length(p1, center) > radius && length(p2, center) > radius) {
 			return hit;
@@ -162,6 +155,40 @@ struct Sphere : public Intersectable {
 		
 		hit.material = material;
 				
+		return hit;
+	}
+};
+
+
+struct Test: public Intersectable {
+	vec3 center;
+	float radius = 0.3f;
+	float a = 6.0f;
+	float b = 6.0f;
+	float c = 1.0f;
+	//Kivenni a dolgokat
+	Test(const vec3& _center, float _radius, Material* _material) {
+		center = _center;
+		radius = _radius;
+		material = _material;
+	}
+
+	Hit intersect(const Ray& ray) {
+		Hit hit;
+		vec3 dist = ray.start - center;
+		float a = dot(ray.dir, ray.dir);
+		float b = dot(dist, ray.dir) * 2.0f;
+		float c = dot(dist, dist) - radius * radius;
+		float discr = b * b - 4.0f * a * c;
+		if (discr < 0) return hit;
+		float sqrt_discr = sqrtf(discr);
+		float t1 = (-b + sqrt_discr) / 2.0f / a;	// t1 >= t2 for sure
+		float t2 = (-b - sqrt_discr) / 2.0f / a;
+		if (t1 <= 0) return hit;
+		hit.t = (t2 > 0) ? t2 : t1;
+		hit.position = ray.start + ray.dir * hit.t;
+		hit.normal = (hit.position - center) * (1.0f / radius);
+		hit.material = material;
 		return hit;
 	}
 };
@@ -303,13 +330,15 @@ public:
 		// DODEKAÉDER
 		// DODEKAÉDER SAKRAI
 		// PORTÁLOK
-		//for (int i = 0; i < 50; i++) {
+		objects.push_back(new Implicit(vec3(0.0f, 0.0f, 0.0f), 0.3f, mat));
+		for (int i = 0; i < 14; i++) {
 			//objects.push_back(new Sphere(vec3(rnd() - 0.5f, rnd() - 0.5f, rnd() - 0.5f), rnd() * 0.1f, mat));
 			//objects.push_back(new Sphere(vec3(0.5f,  0.5f, 0.5f), 0.3f, mat));
 			//objects.push_back(new Sphere(vec3(rnd() - 0.5f, rnd() - 0.5f, rnd() - 0.5f), rnd() * 0.1f, mat));
 			//objects.push_back(new Sphere(vec3(rnd() - 0.5f, rnd() - 0.5f, rnd() - 0.5f), rnd() * 0.1f, mat2));
-		objects.push_back(new Sphere(vec3(0.0f, 0.0f, 0.0f), 0.3f, mat));
-		//}
+	
+			//objects.push_back(new Test(vec3(rnd() - 0.5f, rnd() - 0.5f, rnd() - 0.5f), rnd() * 0.1f, mat2));
+		}
 
 		//objects.push_back(new Dodeka(mat2));
 	}
