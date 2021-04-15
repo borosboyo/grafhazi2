@@ -52,7 +52,7 @@ const char* fragmentSource = R"(
 
 	const vec3 La = vec3(0.5f,0.6f,0.6f);
 	const vec3 Le = vec3(0.8f,0.8f,0.8f);
-	const vec3 lightPosition = vec3(0.4f,0.3f,0.25f);
+	const vec3 lightPosition = vec3(0.4f,0.4f,0.25f);
 	const vec3 ka = vec3(0.5f,0.5f,0.5f);
 	const float shininess = 500.0f;
 	const int maxdepth = 5;
@@ -95,6 +95,10 @@ const char* fragmentSource = R"(
 		p = p1 * scale + vec3(0,0,0.03f);
 	}
 
+	float checkDistance(vec3 X, vec3 Y, vec3 pintersect){
+		vec3 t = pintersect - X - normalize(Y - X) * (dot(pintersect - X, normalize(Y - X)));
+		return dot(pintersect - X, normalize(t));
+	}
 
 	Hit intersectConvexPolyhedron(Ray ray, Hit hit, float scale){
 		for(int i = 0; i < objFaces; i++){
@@ -114,45 +118,44 @@ const char* fragmentSource = R"(
 				}
 			}
 			
-			vec3 P = pintersect;
-			float dist = 0.2;
-
-			for(int ii = 0; ii < 6; ii++){
-				vec3 A = v[planePoints[5 * i + ii] - 1] * scale;
-				vec3 B = v[planePoints[5 * i + ii + 1] - 1] * scale;
-				float k = dot(P - A, normalize(B - A));
-				vec3 t = P - A - normalize(B - A) * k;
-				float temp = dot(P - A, normalize(t));
-				if(temp <= dist)
-					dist = temp;
-			}
-
-
 			if(!outside){
+				float d = 0.15;
+				float temp;
+				for(int ii = 0; ii < 5; ii++){
+					temp = checkDistance(v[planePoints[ii + i * 5] - 1] * scale, 
+								 v[planePoints[1 + ii + i * 5] - 1] * scale, pintersect);
+					if(temp <= d){
+						d = temp;
+					}
+				}
+					temp = checkDistance(v[planePoints[i * 5] - 1] * scale, 
+								 v[planePoints[i * 5 + 4] - 1] * scale, pintersect);
+					if(temp <= d){
+						d = temp;
+					}
+
+				
 				hit.t = ti;
 				hit.position = pintersect;
 				hit.normal = normalize(normal);
-				if(dist <= 0.1) hit.mat = 0;
-				if(dist > 0.1) hit.mat = 2;
-			}
+				if(d <= 0.1) hit.mat = 0;
+				if(d > 0.1) hit.mat = 2;
+				}
 		}
 		return hit;
 	}
 
 	Hit intersectImplicit(Ray ray, Hit hit){
-		//Alap parameterek
 		vec3 center = vec3(0.0f, 0.0f, 0.0f);
 		float radius = 0.3;
 		float a = 7.0;
 		float b = 7.0;
 		float c = 3.0;
 
-		//Implicit egyenlet
 		float A = a * ray.dir.x * ray.dir.x + b * ray.dir.y * ray.dir.y;
 		float B = 2.0 * a * ray.start.x * ray.dir.x + 2.0 * b * ray.start.y * ray.dir.y - c * ray.dir.z;
 		float C = a * ray.start.x * ray.start.x + b * ray.start.y * ray.start.y - c * ray.start.z;	
 
-		//Masodfoku
 		float discr = B * B - 4.0 * A * C;
 		if (discr < 0) return hit;
 		float sqrt_discr = sqrt(discr);
@@ -162,7 +165,6 @@ const char* fragmentSource = R"(
 		vec3 p1 = ray.start + ray.dir * t1;
 		vec3 p2 = ray.start + ray.dir * t2;
 
-		//Benne van-e a gombben
 		if (length(p1, center) > radius && length(p2, center) > radius) {
 			return hit;
 		}
@@ -180,7 +182,6 @@ const char* fragmentSource = R"(
 			else { hit.position = p2; hit.t = t2;}
 		}
 
-		//Normalvektor szamolas
 		float X = ray.start.x + ray.dir.x * hit.t;
 		float Y = ray.start.y + ray.dir.y * hit.t;
 		float Z = ray.start.z + ray.dir.z * hit.t;
@@ -189,9 +190,8 @@ const char* fragmentSource = R"(
 		vec3 fy = vec3(0.0,1.0, 2.0 * b * Y / c);
 
 		hit.position = ray.start + ray.dir * hit.t;
-		hit.normal = cross(fx,fy);
+		hit.normal = normalize(cross(fx,fy));
 
-		//Normalvektor es iranyvektor iranya egyezik-e 
 		if (isEqual(dot(hit.normal, ray.dir), 0.0)) {
 			hit.normal = -hit.normal;
 		}
@@ -211,11 +211,11 @@ const char* fragmentSource = R"(
 	}
 
 	vec3 Fresnel(vec3 F0, float cosTheta) { 
-		return F0 + (vec3(1, 1, 1) - F0) * pow(cosTheta, 5);
+		return F0 + (vec3(1.0, 1.0, 1.0) - F0) * pow(cosTheta, 5);
 	}
 
 	vec3 trace(Ray ray){
-		vec3 outRadiance = vec3(0,0,0);
+		vec3 outRadiance = vec3(0.0,0.0,0.0);
 		for(int d = 0; d < maxdepth; d++){
 			Hit hit = firstIntersect(ray);
 			if(hit.t < 0) break;
@@ -233,7 +233,7 @@ const char* fragmentSource = R"(
 				break;
 			}
 			if(hit.mat == 1){
-				ray.weight *= F0 + (vec3(1,1,1) - F0) * pow(dot(-ray.dir, hit.normal),5);
+				ray.weight *= Fresnel(F0,dot(-ray.dir, hit.normal));
 				ray.start = hit.position + hit.normal * epsilon;
 				ray.dir = reflect(ray.dir, hit.normal);
 			}
