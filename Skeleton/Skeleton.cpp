@@ -50,7 +50,7 @@ const char* fragmentSource = R"(
 	#version 330
 	precision highp float;
 
-	const vec3 La = vec3(0.5f,0.6f,0.6f);
+	const vec3 La = vec3(0.5f,0.6f,0.7f);
 	const vec3 Le = vec3(0.8f,0.8f,0.8f);
 	const vec3 lightPosition = vec3(0.4f,0.4f,0.25f);
 	const vec3 ka = vec3(0.5f,0.5f,0.5f);
@@ -75,6 +75,7 @@ const char* fragmentSource = R"(
 	uniform vec3 kd;
 	uniform vec3 ks;
 	uniform vec3 F0;
+	uniform float deg;
 
 	float length(vec3 p, vec3 c) {
 		return sqrt(pow(p.x - c.x, 2) + pow(p.y - c.y, 2) + pow(p.z - c.z, 2));
@@ -90,7 +91,7 @@ const char* fragmentSource = R"(
 	void getObjPlane(int i, float scale, out vec3 p, out vec3 normal){
 		vec3 p1 = v[planes[ 3 * i] - 1 ], p2 = v[planes[ 3 * i + 1] - 1], p3 = v[planes[ 3 * i + 2] - 1];
 		normal = cross(p2 - p1, p3 - p1);
-		if(dot(p1, normal) < 0) normal = -normal;
+		//if(dot(p1, normal) < 0) normal = -normal;
 		p = p1 * scale + vec3(0,0,0.03f);
 	}
 
@@ -176,14 +177,10 @@ const char* fragmentSource = R"(
 			else { hit.position = p2; hit.t = t2;}
 		}
 
-		float X = ray.start.x + ray.dir.x * hit.t;
-		float Y = ray.start.y + ray.dir.y * hit.t;
-		float Z = ray.start.z + ray.dir.z * hit.t;
-		
-		vec3 fx = vec3(1.0,0.0, 2.0 * a * X / c);
-		vec3 fy = vec3(0.0,1.0, 2.0 * b * Y / c);
+		vec3 temp = ray.start + ray.dir * hit.t;
 
-		hit.position = ray.start + ray.dir * hit.t;
+		vec3 fx = vec3(1.0,0.0, 2.0 * a * temp.x / c);
+		vec3 fy = vec3(0.0,1.0, 2.0 * b * temp.y / c);
 		hit.normal = normalize(cross(fx,fy));
 
 		if (isEqual(dot(hit.normal, ray.dir), 0.0)) {
@@ -207,13 +204,21 @@ const char* fragmentSource = R"(
 		return F0 + (vec3(1.0, 1.0, 1.0) - F0) * pow(cosTheta, 5);
 	}
 
-	vec4 multiplyQuat(vec4 q1, vec4 q2){
-		vec4 q;
-		q.x = (q1.w * q2.x) + (q1.x * q2.w) + (q1.y * q2.z) - (q1.z * q2.y);
-		q.y = (q1.w * q2.y) - (q1.x * q2.z) + (q1.y * q2.w) + (q1.z * q2.x);
-		q.z = (q1.w * q2.z) + (q1.x * q2.y) - (q1.y * q2.x) + (q1.z * q2.w);
-		q.w = (q1.w * q2.w) - (q1.x * q2.x) - (q1.y * q2.y) - (q1.z * q2.z);
-		return q;
+	vec4 qmul(vec4 q1, vec4 q2){
+		vec3 d1 = vec3(q1.x, q1.y, q1.z);
+		vec3 d2 = vec3(q2.x, q2.y, q2.z);
+		return vec4(d2 * q1.w + d1 * q2.w + cross(d1, d2), q1.w * q2.w - dot(d1,d2));
+	}
+	
+	vec4 quaternion(float ang, vec3 axis) {
+		vec3 d = normalize(axis) * sin(ang / 2);
+		return vec4(d.x, d.y, d.z, cos(ang / 2));
+	}
+
+	vec3 Rotate(vec3 u, vec4 q){
+		vec4 qinv  = vec4(-q.x, -q.y, -q.z, q.w);
+		vec4 qr = qmul(qmul(q, vec4(u.x, u.y, u.z, 0)), qinv);
+		return vec3(qr.x, qr.y, qr.z);
 	}
 
 	vec3 trace(Ray ray){
@@ -235,15 +240,16 @@ const char* fragmentSource = R"(
 				break;
 			}
 			if(hit.mat == 1){
-				ray.weight *= Fresnel(F0,dot(-ray.dir, hit.normal));
+				ray.weight *= Fresnel(F0, 1.0f - dot(-ray.dir, hit.normal));
 				ray.start = hit.position + hit.normal * epsilon;
 				ray.dir = reflect(ray.dir, hit.normal);
 			}
 			if(hit.mat == 2){
-				
+				vec4 q = quaternion(deg, hit.normal);
 				ray.start = hit.position + hit.normal * epsilon;
 				ray.dir = reflect(ray.dir, hit.normal);
-				
+				ray.start = Rotate(ray.start, q);
+				ray.dir = Rotate(ray.dir, q);
 			}
 		}
 		outRadiance += ray.weight * La;
@@ -279,15 +285,10 @@ public:
 		eye = vec3(r * cos(t) + lookat.x, r * sin(t) + lookat.y, eye.z);
 		set();
 	}
-	void Step(float step) {
-		eye = normalize(eye + pvup * step) * length(eye);
-		set();
-	}
 };
 
 GPUProgram shader;
 Camera camera;
-bool animate = true;
 
 float F(float n, float k) { return ((n - 1) * (n - 1) + k * k) / ((n + 1) * (n + 1) + k * k); }
 
@@ -356,6 +357,8 @@ void onInitialization() {
 	shader.setUniform(vec3(1.9f, 0.6f, 0.4f), "kd");
 	shader.setUniform(vec3(5, 5, 5), "ks");
 	shader.setUniform(vec3(F(0.17, 3.1), F(0.35, 2.7), F(1.5, 1.9)), "F0");
+	float deg = 72 * (float)M_PI / 180;
+	shader.setUniform(deg, "deg");
 }
 
 
@@ -372,14 +375,7 @@ void onDisplay() {
 	glutSwapBuffers();
 }
 
-void onKeyboard(unsigned char key, int pX, int pY) {
-	if (key == 'f')
-		camera.Step(0.1f);         
-	if (key == 'F')
-		camera.Step(-0.1f);        
-	if (key == 'a')
-		animate = !animate;       
-}
+void onKeyboard(unsigned char key, int pX, int pY) { }
 
 void onKeyboardUp(unsigned char key, int pX, int pY) {}
 
@@ -388,6 +384,6 @@ void onMouseMotion(int pX, int pY) {}
 void onMouse(int button, int state, int pX, int pY) {}
 
 void onIdle() {
-	if (animate) camera.Animate(glutGet(GLUT_ELAPSED_TIME) / 1000.0f);
+	camera.Animate(glutGet(GLUT_ELAPSED_TIME) / 1000.0f);
 	glutPostRedisplay();
 }
