@@ -90,7 +90,6 @@ const char* fragmentSource = R"(
 	void getObjPlane(int i, float scale, out vec3 p, out vec3 normal){
 		vec3 p1 = v[planes[ 3 * i] - 1 ], p2 = v[planes[ 3 * i + 1] - 1], p3 = v[planes[ 3 * i + 2] - 1];
 		normal = cross(p2 - p1, p3 - p1);
-		//itt lehet meg kell forditani
 		if(dot(p1, normal) < 0) normal = -normal;
 		p = p1 * scale + vec3(0,0,0.03f);
 	}
@@ -124,23 +123,18 @@ const char* fragmentSource = R"(
 				for(int ii = 0; ii < 5; ii++){
 					temp = checkDistance(v[planePoints[ii + i * 5] - 1] * scale, 
 								 v[planePoints[1 + ii + i * 5] - 1] * scale, pintersect);
-					if(temp <= d){
-						d = temp;
-					}
+					if(temp <= d) d = temp;
 				}
-					temp = checkDistance(v[planePoints[i * 5] - 1] * scale, 
-								 v[planePoints[i * 5 + 4] - 1] * scale, pintersect);
-					if(temp <= d){
-						d = temp;
-					}
+				temp = checkDistance(v[planePoints[i * 5] - 1] * scale, 
+								v[planePoints[i * 5 + 4] - 1] * scale, pintersect);
+				if(temp <= d) d = temp;
 
-				
 				hit.t = ti;
 				hit.position = pintersect;
 				hit.normal = normalize(normal);
 				if(d <= 0.1) hit.mat = 0;
 				if(d > 0.1) hit.mat = 2;
-				}
+			}
 		}
 		return hit;
 	}
@@ -200,7 +194,6 @@ const char* fragmentSource = R"(
 		return hit;
 	}
 
-
 	Hit firstIntersect(Ray ray){
 		Hit bestHit;
 		bestHit.t = -1;
@@ -212,6 +205,15 @@ const char* fragmentSource = R"(
 
 	vec3 Fresnel(vec3 F0, float cosTheta) { 
 		return F0 + (vec3(1.0, 1.0, 1.0) - F0) * pow(cosTheta, 5);
+	}
+
+	vec4 multiplyQuat(vec4 q1, vec4 q2){
+		vec4 q;
+		q.x = (q1.w * q2.x) + (q1.x * q2.w) + (q1.y * q2.z) - (q1.z * q2.y);
+		q.y = (q1.w * q2.y) - (q1.x * q2.z) + (q1.y * q2.w) + (q1.z * q2.x);
+		q.z = (q1.w * q2.z) + (q1.x * q2.y) - (q1.y * q2.x) + (q1.z * q2.w);
+		q.w = (q1.w * q2.w) - (q1.x * q2.x) - (q1.y * q2.y) - (q1.z * q2.z);
+		return q;
 	}
 
 	vec3 trace(Ray ray){
@@ -238,8 +240,10 @@ const char* fragmentSource = R"(
 				ray.dir = reflect(ray.dir, hit.normal);
 			}
 			if(hit.mat == 2){
+				
 				ray.start = hit.position + hit.normal * epsilon;
 				ray.dir = reflect(ray.dir, hit.normal);
+				
 			}
 		}
 		outRadiance += ray.weight * La;
@@ -257,7 +261,6 @@ const char* fragmentSource = R"(
 		fragmentColor = vec4(trace(ray),1);
 	}
 )";
-
 
 struct Camera {
 	vec3 eye, lookat, right, pvup, rvup;
@@ -288,27 +291,6 @@ bool animate = true;
 
 float F(float n, float k) { return ((n - 1) * (n - 1) + k * k) / ((n + 1) * (n + 1) + k * k); }
 
-
-bool checkNearEdge(vec3 a, vec3 b, vec3 p) {
-	float tf = dot(p - a, normalize(b - a));
-	vec3 tt = p - a - normalize(b - a) * tf;
-	float d = dot(p - a, normalize(tt));
-	if (d < 0.1) return true;
-	else return false;
-}
-
-
-bool isEqual(float f1, float f2) {
-	if ((abs(f1 - f2) <= 0.0001)) {
-		return true;
-	}
-	return false;
-}
-
-void printvec(vec3 x) {
-	printf("X: %3.2f Y: %3.2f, Z: %3.2f |", x.x, x.y, x.z);
-}
-
 void onInitialization() {
 	glViewport(0, 0, windowWidth, windowHeight);
 
@@ -326,10 +308,10 @@ void onInitialization() {
 
 	const float g = 0.618f, G = 1.618f;
 	std::vector <vec3> v = {
-			vec3(0, g, G), vec3(0, -g, G), vec3(0, -g, -G), vec3(0, g, -G), vec3(G, 0, g)
-		   ,vec3(-G, 0, g), vec3(-G, 0, -g), vec3(G, 0, -g), vec3(g, G, 0), vec3(-g, G, 0)
-		   ,vec3(-g, -G, 0), vec3(g, -G, 0), vec3(1, 1, 1), vec3(-1, 1, 1), vec3(-1, -1, 1), vec3(1, -1, 1)
-		   , vec3(1, -1, -1), vec3(1, 1, -1), vec3(-1, 1, -1), vec3(-1, -1, -1)
+			vec3(0, g, G), vec3(0, -g, G), vec3(0, -g, -G), vec3(0, g, -G), vec3(G, 0, g),
+			vec3(-G, 0, g), vec3(-G, 0, -g), vec3(G, 0, -g), vec3(g, G, 0), vec3(-g, G, 0),
+			vec3(-g, -G, 0), vec3(g, -G, 0), vec3(1, 1, 1), vec3(-1, 1, 1), vec3(-1, -1, 1), 
+			vec3(1, -1, 1),vec3(1, -1, -1), vec3(1, 1, -1), vec3(-1, 1, -1), vec3(-1, -1, -1)
 	};
 	for (int i = 0; i < v.size(); i++) {
 		shader.setUniform(v[i], "v[" + std::to_string(i) + "]");
@@ -385,8 +367,8 @@ void onDisplay() {
 	shader.setUniform(camera.lookat, "wLookAt");
 	shader.setUniform(camera.right, "wRight");
 	shader.setUniform(camera.rvup, "wUp");
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 	glutSwapBuffers();
 }
 
@@ -399,17 +381,13 @@ void onKeyboard(unsigned char key, int pX, int pY) {
 		animate = !animate;       
 }
 
-void onKeyboardUp(unsigned char key, int pX, int pY) {
-}
+void onKeyboardUp(unsigned char key, int pX, int pY) {}
 
-void onMouseMotion(int pX, int pY) {
-}
+void onMouseMotion(int pX, int pY) {}
 
-void onMouse(int button, int state, int pX, int pY) { 
-}
+void onMouse(int button, int state, int pX, int pY) {}
 
 void onIdle() {
-	if (animate)
-		camera.Animate(glutGet(GLUT_ELAPSED_TIME) / 1000.0f);
+	if (animate) camera.Animate(glutGet(GLUT_ELAPSED_TIME) / 1000.0f);
 	glutPostRedisplay();
 }
