@@ -5,3 +5,6 @@ A szoba falai a saroktól 0.1 méterig diffúz-spekuláris típusúak, azokon be
 A fényforrás a portálon nem világít át, minden szobának saját fényforrása van. 
 A megjelenítés során elég max 5-ször átlépni a portálokat. A virtuális kamera a szoba közepére néz és a körül forog. Az arany törésmutatója és kioltási tényezője: n/k: 0.17/3.1, 0.35/2.7, 1.5/1.9 
 A többi paraméter egyénileg megválasztható, úgy, hogy a kép szép legyen. Az 𝑎,𝑏,𝑐 pozitív, nem egész számok. 
+
+
+![alt text](https://github.com/borosboyo/grafhazi2 "GHW2GIF")
