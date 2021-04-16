@@ -7,4 +7,4 @@ A megjelenítés során elég max 5-ször átlépni a portálokat. A virtuális 
 A többi paraméter egyénileg megválasztható, úgy, hogy a kép szép legyen. Az 𝑎,𝑏,𝑐 pozitív, nem egész számok. 
 
 
-![alt text](https://github.com/borosboyo/grafhazi2 "GHW2GIF")
+![](https://github.com/borosboyo/grafhazi2 "GHW2GIF")
