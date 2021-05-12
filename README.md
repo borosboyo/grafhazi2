@@ -1,4 +1,7 @@
 # Masodik grafika hazi 2021 tavasz / Ray tracing on GPU (OpenGL)
+
+**"Plágiumnak minősül mások szellemi termékének forrásmegjelölés nélküli felhasználása, függetlenül attól, hogy szóban, írásban, Interneten vagy bámely más csatornán jutott el a házifeladat beadójához, amely szabály alól csak az előadásfóliák, a tantárgy oktatóinak szóbeli tanácsai, és a grafházi doktor levelei képeznek kivételt. Plágium esetén a feladatra adható pontokat negatív előjellel számoljuk el, és ezzel párhuzamosan a tett súlyosságának megfelelő fórumon eljárást indítunk."**
+
 Készítsen sugárkövető programot, amely egy √3 m sugarú gömbbe írható dodekaéder szobát jelenít meg. 
 A szobában egy 𝑓(𝑥,𝑦,𝑧)=exp⁡(𝑎𝑥^2+𝑏𝑦^2−𝑐𝑧)−1 implicit egyenlettel definiált, a szoba közepén levő 0.3 m sugarú gömbre vágott, optikailag sima arany objektum van és egy pontszerű fényforrás. 
 A szoba falai a saroktól 0.1 méterig diffúz-spekuláris típusúak, azokon belül egy másik, hasonló, de a fal középpontja körül 72 fokkal elforgatott és a fal síkjára tükrözött szobára nyíló portálok. 
